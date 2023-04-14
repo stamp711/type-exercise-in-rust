@@ -1,18 +1,2 @@
 [workspace]
-members = [
-    "archive/day1",
-    "archive/day2",
-    "archive/day3",
-    "archive/day4",
-    "archive/day5",
-    "archive/day6-easy",
-    "archive/day6-hard",
-    "archive/day7-easy",
-    "archive/day7-hard",
-    "archive/day8",
-    "expr-common",
-    "expr-impl",
-    "expr-template",
-    "expr-template-impl",
-    "expr-macro-rules",
-]
+members = ["type-exercise"]
