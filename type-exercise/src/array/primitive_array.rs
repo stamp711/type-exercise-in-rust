@@ -3,7 +3,9 @@ use bitvec::vec::BitVec;
 use super::{Array, ArrayBuilder, Scalar, ScalarRef};
 
 impl PrimitiveType for i32 {}
+impl PrimitiveType for f64 {}
 pub type I32Array = PrimitiveArray<i32>;
+pub type F64Array = PrimitiveArray<f64>;
 
 pub trait PrimitiveType: Copy + Send + Sync + std::fmt::Debug + 'static {}
 
@@ -73,7 +75,7 @@ where
     T: for<'a> Scalar<ArrayType = Self, RefType<'a> = T>,
     T: for<'a> ScalarRef<'a, ArrayType = Self, ScalarType = T>,
 {
-    type Array = PrimitiveArray<T>;
+    type Array = Self;
 
     fn with_capacity(capacity: usize) -> Self {
         Self {
