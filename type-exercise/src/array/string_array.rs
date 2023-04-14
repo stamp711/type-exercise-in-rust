@@ -6,7 +6,7 @@ impl Scalar for String {
     type ArrayType = StringArray;
     type RefType<'a> = &'a str;
     fn as_scalar_ref(&self) -> Self::RefType<'_> {
-        &self
+        self.as_str()
     }
 }
 
