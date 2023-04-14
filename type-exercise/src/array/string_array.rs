@@ -1,6 +1,22 @@
 use bitvec::vec::BitVec;
 
-use super::{Array, ArrayBuilder};
+use super::{Array, ArrayBuilder, Scalar, ScalarRef};
+
+impl Scalar for String {
+    type ArrayType = StringArray;
+    type RefType<'a> = &'a str;
+    fn as_scalar_ref(&self) -> Self::RefType<'_> {
+        &self
+    }
+}
+
+impl<'a> ScalarRef<'a> for &'a str {
+    type ArrayType = StringArray;
+    type ScalarType = String;
+    fn to_owned_scalar(&self) -> Self::ScalarType {
+        self.to_string()
+    }
+}
 
 pub struct StringArray {
     /// The flattened data of string.
@@ -28,6 +44,7 @@ impl StringArray {
 }
 
 impl Array for StringArray {
+    type OwnedItem = String;
     type RefItem<'a> = &'a str;
     type Builder = StringArrayBuilder;
     fn get(&self, idx: usize) -> Option<Self::RefItem<'_>> {
@@ -55,10 +72,10 @@ impl ArrayBuilder for StringArrayBuilder {
 
     fn push(&mut self, item: Option<<Self::Array as Array>::RefItem<'_>>) {
         self.bitmap.push(item.is_some());
-        self.offsets.push(item.map_or(0, |i| i.len()));
         if let Some(item) = item {
             self.data.extend_from_slice(item.as_bytes());
         }
+        self.offsets.push(self.data.len());
     }
 
     fn finish(self) -> Self::Array {

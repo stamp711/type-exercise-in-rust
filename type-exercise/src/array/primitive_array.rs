@@ -1,17 +1,43 @@
 use bitvec::vec::BitVec;
 
-use super::{Array, ArrayBuilder};
+use super::{Array, ArrayBuilder, Scalar, ScalarRef};
 
-pub trait PrimitiveType: Copy + Send + Sync + 'static {}
+impl PrimitiveType for i32 {}
+pub type I32Array = PrimitiveArray<i32>;
 
-pub struct PrimitiveArray<T: PrimitiveType> {
+pub trait PrimitiveType: Copy + Send + Sync + std::fmt::Debug + 'static {}
+
+impl<T: PrimitiveType> Scalar for T {
+    type ArrayType = PrimitiveArray<T>;
+    type RefType<'a> = T;
+
+    fn as_scalar_ref(&self) -> Self::RefType<'_> {
+        *self
+    }
+}
+
+impl<T: PrimitiveType> ScalarRef<'_> for T {
+    type ArrayType = PrimitiveArray<T>;
+    type ScalarType = T;
+    fn to_owned_scalar(&self) -> Self::ScalarType {
+        *self
+    }
+}
+
+pub struct PrimitiveArray<T> {
     /// The actual data of this array.
     data: Vec<T>,
     /// The null bitmap of this array.
     bitmap: BitVec,
 }
 
-impl<T: PrimitiveType> Array for PrimitiveArray<T> {
+impl<T> Array for PrimitiveArray<T>
+where
+    T: PrimitiveType,
+    T: for<'a> Scalar<ArrayType = Self, RefType<'a> = T>,
+    T: for<'a> ScalarRef<'a, ArrayType = Self, ScalarType = T>,
+{
+    type OwnedItem = T;
     type RefItem<'a> = T;
     type Builder = PrimitiveArrayBuilder<T>;
     fn get(&self, idx: usize) -> Option<Self::RefItem<'_>> {
@@ -22,7 +48,10 @@ impl<T: PrimitiveType> Array for PrimitiveArray<T> {
     }
 }
 
-impl<T: PrimitiveType> PrimitiveArray<T> {
+impl<T> PrimitiveArray<T>
+where
+    T: PrimitiveType,
+{
     fn get(&self, idx: usize) -> Option<T> {
         if self.bitmap[idx] {
             Some(self.data[idx])
@@ -38,7 +67,12 @@ impl<T: PrimitiveType> PrimitiveArray<T> {
 
 type PrimitiveArrayBuilder<T> = PrimitiveArray<T>;
 
-impl<T: PrimitiveType> ArrayBuilder for PrimitiveArrayBuilder<T> {
+impl<T> ArrayBuilder for PrimitiveArrayBuilder<T>
+where
+    T: PrimitiveType,
+    T: for<'a> Scalar<ArrayType = Self, RefType<'a> = T>,
+    T: for<'a> ScalarRef<'a, ArrayType = Self, ScalarType = T>,
+{
     type Array = PrimitiveArray<T>;
 
     fn with_capacity(capacity: usize) -> Self {
