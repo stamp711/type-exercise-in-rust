@@ -58,6 +58,9 @@ pub trait Array: Send + Sync + Sized + 'static {
     /// The reference item of this array.
     type RefItem<'a>;
 
+    /// The builder type of this array.
+    type Builder: ArrayBuilder<Array = Self>;
+
     /// Retrieve a reference to value.
     fn get<'s>(&'s self, idx: usize) -> Option<Self::RefItem<'s>>;
 
@@ -78,25 +81,75 @@ pub trait Array: Send + Sync + Sized + 'static {
     }
 }
 
+type PrimitiveArrayBuilder<T> = PrimitiveArray<T>;
+
+impl<T: PrimitiveType> ArrayBuilder for PrimitiveArrayBuilder<T> {
+    type Array = PrimitiveArray<T>;
+
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            data: Vec::with_capacity(capacity),
+            bitmap: BitVec::with_capacity(capacity),
+        }
+    }
+
+    fn push(&mut self, item: Option<<Self::Array as Array>::RefItem<'_>>) {
+        self.bitmap.push(item.is_some());
+        if let Some(value) = item {
+            self.data.push(value);
+        }
+    }
+
+    fn finish(self) -> Self::Array {
+        self
+    }
+}
+
 impl<T: PrimitiveType> Array for PrimitiveArray<T> {
     type RefItem<'a> = T;
-
+    type Builder = PrimitiveArrayBuilder<T>;
     fn get<'s>(&'s self, idx: usize) -> Option<Self::RefItem<'s>> {
         self.get(idx)
     }
-
     fn len(&self) -> usize {
         self.len()
     }
 }
 
+type StringArrayBuilder = StringArray;
+
+impl ArrayBuilder for StringArrayBuilder {
+    type Array = StringArray;
+
+    fn with_capacity(capacity: usize) -> Self {
+        let mut this = Self {
+            data: Vec::new(),
+            offsets: Vec::with_capacity(capacity + 1),
+            bitmap: BitVec::with_capacity(capacity),
+        };
+        this.offsets.push(0);
+        this
+    }
+
+    fn push(&mut self, item: Option<<Self::Array as Array>::RefItem<'_>>) {
+        self.bitmap.push(item.is_some());
+        self.offsets.push(item.map_or(0, |i| i.len()));
+        if let Some(item) = item {
+            self.data.extend_from_slice(item.as_bytes());
+        }
+    }
+
+    fn finish(self) -> Self::Array {
+        self
+    }
+}
+
 impl Array for StringArray {
     type RefItem<'a> = &'a str;
-
+    type Builder = StringArrayBuilder;
     fn get<'s>(&'s self, idx: usize) -> Option<Self::RefItem<'s>> {
         self.get(idx)
     }
-
     fn len(&self) -> usize {
         self.len()
     }
@@ -121,4 +174,22 @@ impl<'a, A: Array> Iterator for ArrayIterator<'a, A> {
             None
         }
     }
+}
+
+pub trait ArrayBuilder {
+    type Array: Array;
+
+    fn with_capacity(capacity: usize) -> Self;
+    fn push(&mut self, item: Option<<Self::Array as Array>::RefItem<'_>>);
+    fn finish(self) -> Self::Array;
+}
+
+#[allow(unused)]
+fn eval_binary<I: Array, O: Array>(i1: I, i2: I) -> O {
+    assert_eq!(i1.len(), i2.len(), "size mismatch");
+    let mut builder = O::Builder::with_capacity(i1.len());
+    for (i1, i2) in i1.iter().zip(i2.iter()) {
+        //   builder.push(sql_func(i1, i2));
+    }
+    builder.finish()
 }
