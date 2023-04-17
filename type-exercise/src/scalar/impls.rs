@@ -11,6 +11,10 @@ impl<T: PrimitiveType> Scalar for T {
     fn as_scalar_ref(&self) -> Self::RefType<'_> {
         *self
     }
+
+    fn upcast_ref<'short, 'long: 'short>(r: Self::RefType<'long>) -> Self::RefType<'short> {
+        r
+    }
 }
 
 impl<T: PrimitiveType> ScalarRef<'_> for T {
@@ -36,6 +40,9 @@ impl Scalar for String {
     type RefType<'a> = &'a str;
     fn as_scalar_ref(&self) -> Self::RefType<'_> {
         self.as_str()
+    }
+    fn upcast_ref<'short, 'long: 'short>(r: Self::RefType<'long>) -> Self::RefType<'short> {
+        r
     }
 }
 

@@ -75,4 +75,32 @@ mod test {
             .unwrap();
         check_array_eq::<StringArray>((&result).try_into().unwrap(), &[Some("aaaa"), None, None]);
     }
+
+    #[test]
+    fn test_str_cmp_le() {
+        let expr = BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(
+            cmp_le::<String, String, String>,
+        );
+        let result = expr
+            .eval(
+                &StringArray::from_slice(&[Some("aa"), Some("bb"), None]).into(),
+                &StringArray::from_slice(&[Some("aa"), None, Some("cc")]).into(),
+            )
+            .unwrap();
+        check_array_eq::<BoolArray>((&result).try_into().unwrap(), &[Some(true), None, None]);
+    }
+
+    #[test]
+    fn test_str_cmp_eq() {
+        let expr = BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(
+            cmp_eq::<String, String, String>,
+        );
+        let result = expr
+            .eval(
+                &StringArray::from_slice(&[Some("aa"), Some("bb"), None]).into(),
+                &StringArray::from_slice(&[Some("aa"), None, Some("cc")]).into(),
+            )
+            .unwrap();
+        check_array_eq::<BoolArray>((&result).try_into().unwrap(), &[Some(true), None, None]);
+    }
 }
