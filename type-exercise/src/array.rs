@@ -1,23 +1,12 @@
-pub mod primitive_array;
-pub mod string_array;
+mod dispatch;
+mod primitive_array;
+mod string_array;
 
+pub use dispatch::*;
 pub use primitive_array::*;
 pub use string_array::*;
 
-/// An owned single value.
-///  
-/// For example, `i32`, `String` both implements [`Scalar`].
-pub trait Scalar: std::fmt::Debug + Clone + Send + Sync + 'static {
-    type ArrayType: for<'a> Array<OwnedItem = Self, RefItem<'a> = Self::RefType<'a>>;
-    type RefType<'a>: ScalarRef<'a, ScalarType = Self, ArrayType = Self::ArrayType>;
-    fn as_scalar_ref(&self) -> Self::RefType<'_>;
-}
-
-pub trait ScalarRef<'a>: std::fmt::Debug + Clone + Copy + Send + 'a {
-    type ArrayType: Array<RefItem<'a> = Self, OwnedItem = Self::ScalarType>;
-    type ScalarType: Scalar<RefType<'a> = Self, ArrayType = Self::ArrayType>;
-    fn to_owned_scalar(&self) -> Self::ScalarType;
-}
+use crate::scalar::{Scalar, ScalarRef};
 
 /// [`Array`] is a collection of data of the same type.
 pub trait Array: Send + Sync + Sized + 'static // + TryFrom<ArrayImpl> + Into<ArrayImpl>
@@ -86,75 +75,6 @@ impl<'a, A: Array> Iterator for ArrayIterator<'a, A> {
             None
         }
     }
-}
-
-/// All variants of [`Array`].
-pub enum ArrayImpl {
-    Int32(I32Array),
-    Float64(F64Array),
-    String(StringArray),
-}
-
-impl TryFrom<ArrayImpl> for StringArray {
-    type Error = ();
-    fn try_from(array: ArrayImpl) -> Result<Self, Self::Error> {
-        match array {
-            ArrayImpl::String(this) => Ok(this),
-            _ => Err(()),
-        }
-    }
-}
-
-impl From<StringArray> for ArrayImpl {
-    fn from(array: StringArray) -> Self {
-        Self::String(array)
-    }
-}
-
-impl TryFrom<ArrayImpl> for I32Array {
-    type Error = ();
-    fn try_from(array: ArrayImpl) -> Result<Self, Self::Error> {
-        match array {
-            ArrayImpl::Int32(this) => Ok(this),
-            _ => Err(()),
-        }
-    }
-}
-
-impl From<I32Array> for ArrayImpl {
-    fn from(array: I32Array) -> Self {
-        Self::Int32(array)
-    }
-}
-
-impl TryFrom<ArrayImpl> for F64Array {
-    type Error = ();
-    fn try_from(array: ArrayImpl) -> Result<Self, Self::Error> {
-        match array {
-            ArrayImpl::Float64(this) => Ok(this),
-            _ => Err(()),
-        }
-    }
-}
-
-impl From<F64Array> for ArrayImpl {
-    fn from(array: F64Array) -> Self {
-        Self::Float64(array)
-    }
-}
-
-/// All variants of [`Scalar`].
-pub enum ScalarImpl {
-    Int32(i32),
-    Float64(f64),
-    String(String),
-}
-
-/// All variants of [`ScalarRef`].
-pub enum ScalarRefImpl<'a> {
-    Int32(i32),
-    Float64(f64),
-    String(&'a str),
 }
 
 #[cfg(test)]

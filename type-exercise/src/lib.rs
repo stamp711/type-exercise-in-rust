@@ -4,6 +4,8 @@
 use array::{Array, ArrayImpl};
 
 pub mod array;
+pub(crate) mod macros;
+pub mod scalar;
 
 #[allow(unused_variables)]
 pub fn eval_binary<'a, I1: Array, I2: Array>(

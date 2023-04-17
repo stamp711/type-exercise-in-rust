@@ -1,22 +1,6 @@
 use bitvec::vec::BitVec;
 
-use super::{Array, ArrayBuilder, Scalar, ScalarRef};
-
-impl Scalar for String {
-    type ArrayType = StringArray;
-    type RefType<'a> = &'a str;
-    fn as_scalar_ref(&self) -> Self::RefType<'_> {
-        self.as_str()
-    }
-}
-
-impl<'a> ScalarRef<'a> for &'a str {
-    type ArrayType = StringArray;
-    type ScalarType = String;
-    fn to_owned_scalar(&self) -> Self::ScalarType {
-        self.to_string()
-    }
-}
+use crate::array::{Array, ArrayBuilder};
 
 pub struct StringArray {
     /// The flattened data of string.
@@ -55,7 +39,7 @@ impl Array for StringArray {
     }
 }
 
-type StringArrayBuilder = StringArray;
+pub type StringArrayBuilder = StringArray;
 
 impl ArrayBuilder for StringArrayBuilder {
     type Array = StringArray;

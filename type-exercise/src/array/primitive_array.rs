@@ -1,30 +1,8 @@
 use bitvec::vec::BitVec;
 
-use super::{Array, ArrayBuilder, Scalar, ScalarRef};
-
-impl PrimitiveType for i32 {}
-impl PrimitiveType for f64 {}
-pub type I32Array = PrimitiveArray<i32>;
-pub type F64Array = PrimitiveArray<f64>;
-
-pub trait PrimitiveType: Copy + Send + Sync + std::fmt::Debug + 'static {}
-
-impl<T: PrimitiveType> Scalar for T {
-    type ArrayType = PrimitiveArray<T>;
-    type RefType<'a> = T;
-
-    fn as_scalar_ref(&self) -> Self::RefType<'_> {
-        *self
-    }
-}
-
-impl<T: PrimitiveType> ScalarRef<'_> for T {
-    type ArrayType = PrimitiveArray<T>;
-    type ScalarType = T;
-    fn to_owned_scalar(&self) -> Self::ScalarType {
-        *self
-    }
-}
+use crate::array::{Array, ArrayBuilder};
+use crate::macros::for_all_primitive_types;
+use crate::scalar::{PrimitiveType, Scalar, ScalarRef};
 
 pub struct PrimitiveArray<T> {
     /// The actual data of this array.
@@ -95,3 +73,14 @@ where
         self
     }
 }
+
+macro_rules! define_primitive_array {
+    ($({ $Name:ident, $Variant:ident, $Array:ident, $ArrayBuilder:ident, $Owned:ty, $Ref:ty }),*) => {
+        $(
+            pub type $Array = PrimitiveArray<$Owned>;
+            pub type $ArrayBuilder = PrimitiveArrayBuilder<$Owned>;
+        )*
+    };
+}
+
+for_all_primitive_types! {define_primitive_array}
