@@ -79,6 +79,16 @@ macro_rules! array_dispatch {
                 }
             }
 
+            impl<'a> std::convert::TryFrom<&'a ArrayImpl> for &'a $Array {
+                type Error = ();
+                fn try_from(array: &'a ArrayImpl) -> Result<Self, Self::Error> {
+                    match array {
+                        ArrayImpl::$Variant(this) => Ok(this),
+                        _ => Err(()),
+                    }
+                }
+            }
+
             impl From<$Array> for ArrayImpl {
                 fn from(array: $Array) -> Self {
                     Self::$Variant(array)

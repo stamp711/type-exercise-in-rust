@@ -1,12 +1,12 @@
-mod dispatch;
-mod primitive_array;
-mod string_array;
-
 pub use dispatch::*;
 pub use primitive_array::*;
 pub use string_array::*;
 
 use crate::scalar::{Scalar, ScalarRef};
+
+mod dispatch;
+mod primitive_array;
+mod string_array;
 
 /// [`Array`] is a collection of data of the same type.
 pub trait Array: Send + Sync + Sized + 'static // + TryFrom<ArrayImpl> + Into<ArrayImpl>
