@@ -82,6 +82,7 @@ mod tests {
     use super::primitive_array::I32Array;
     use super::string_array::StringArray;
     use super::{Array, ArrayBuilder, ArrayImpl};
+    use crate::TypeMismatch;
 
     // These are two examples of using generics over array.
     //
@@ -134,7 +135,7 @@ mod tests {
         builder.finish()
     }
 
-    fn add_i32_wrapper(i1: ArrayImpl, i2: ArrayImpl) -> Result<ArrayImpl, ()> {
+    fn add_i32_wrapper(i1: ArrayImpl, i2: ArrayImpl) -> Result<ArrayImpl, TypeMismatch> {
         Ok(add_i32_vec(&i1.try_into()?, &i2.try_into()?).into())
     }
 

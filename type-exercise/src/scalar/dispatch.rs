@@ -1,7 +1,9 @@
 use crate::macros::for_all_types;
+use crate::TypeMismatch;
 
 macro_rules! define_scalar_impl {
     ($({ $Name:ident, $Variant:ident, $Array:ident, $ArrayBuilder:ty, $Owned:ty, $Ref:ty }),*) => {
+        #[derive(Debug, PartialEq, Clone)]
         pub enum ScalarImpl {
             $(
                 $Variant($Owned),
@@ -14,6 +16,7 @@ for_all_types! { define_scalar_impl }
 
 macro_rules! define_scalar_ref_impl {
     ($({ $Name:ident, $Variant:ident, $Array:ident, $ArrayBuilder:ty, $Owned:ty, $Ref:ty }),*) => {
+        #[derive(Debug, PartialEq, Clone, Copy)]
         pub enum ScalarRefImpl<'a> {
             $(
                 $Variant($Ref),
@@ -34,11 +37,11 @@ macro_rules! impl_scalar_conversion {
             }
 
             impl TryFrom<ScalarImpl> for $Owned {
-                type Error = ();
+                type Error = TypeMismatch;
                 fn try_from(value: ScalarImpl) -> Result<Self, Self::Error> {
                     match value {
                         ScalarImpl::$Variant(this) => Ok(this),
-                        _ => Err(()),
+                        _ => Err(TypeMismatch),
                     }
                 }
             }
@@ -50,11 +53,11 @@ macro_rules! impl_scalar_conversion {
             }
 
             impl<'a> TryFrom<ScalarRefImpl<'a>> for $Ref {
-                type Error = ();
+                type Error = TypeMismatch;
                 fn try_from(value: ScalarRefImpl<'a>) -> Result<Self, Self::Error> {
                     match value {
                         ScalarRefImpl::$Variant(this) => Ok(this),
-                        _ => Err(()),
+                        _ => Err(TypeMismatch),
                     }
                 }
             }

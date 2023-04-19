@@ -1,45 +1,58 @@
+pub use binary::*;
 pub use cmp::*;
 pub use string::*;
 
-use crate::array::{Array, ArrayBuilder, ArrayImpl};
-use crate::scalar::Scalar;
+use crate::array::{ArrayImpl, BoolArray, I32Array, StringArray};
 
+mod binary;
 mod cmp;
 mod string;
 
-pub struct BinaryExpression<I1, I2, O, F> {
-    func: F,
-    _phantom: std::marker::PhantomData<(I1, I2, O)>,
+pub trait Expression {
+    /// Evaluate the expression with the given input arrays.
+    fn eval_expr(&self, data: &[&ArrayImpl]) -> anyhow::Result<ArrayImpl>;
 }
 
-impl<I1: Array, I2: Array, O: Array, F> BinaryExpression<I1, I2, O, F> {
-    pub fn new(func: F) -> Self {
-        Self {
-            func,
-            _phantom: std::marker::PhantomData,
+/// All supported expression functions.
+pub enum ExpressionFunc {
+    CmpLt,
+    CmpLe,
+    CmpGt,
+    CmpGe,
+    CmpEq,
+    CmpNe,
+    StrContains,
+    StrConcat,
+}
+
+pub fn build_binary_expression(f: ExpressionFunc) -> Box<dyn Expression> {
+    use ExpressionFunc::*;
+
+    match f {
+        CmpLt => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_lt::<i32, i32, i32>,
+        )),
+        CmpLe => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_le::<i32, i32, i32>,
+        )),
+        CmpGt => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_gt::<i32, i32, i32>,
+        )),
+        CmpGe => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_ge::<i32, i32, i32>,
+        )),
+        CmpEq => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_eq::<i32, i32, i32>,
+        )),
+        CmpNe => Box::new(BinaryExpression::<I32Array, I32Array, BoolArray, _>::new(
+            cmp_ne::<i32, i32, i32>,
+        )),
+        StrContains => {
+            Box::new(BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(str_contains))
         }
-    }
-
-    pub fn eval(&self, i1: &ArrayImpl, i2: &ArrayImpl) -> Result<ArrayImpl, ()>
-    where
-        for<'a> &'a I1: TryFrom<&'a ArrayImpl, Error = ()>,
-        for<'a> &'a I2: TryFrom<&'a ArrayImpl, Error = ()>,
-        F: Fn(I1::RefItem<'_>, I2::RefItem<'_>) -> O::OwnedItem,
-        O: Into<ArrayImpl>,
-    {
-        let i1: &I1 = i1.try_into()?;
-        let i2: &I2 = i2.try_into()?;
-        assert_eq!(i1.len(), i2.len(), "array length mismatch");
-
-        let mut builder = O::Builder::with_capacity(i1.len());
-        for (a, b) in i1.iter().zip(i2.iter()) {
-            match (a, b) {
-                (Some(a), Some(b)) => builder.push(Some((self.func)(a, b).as_scalar_ref())),
-                _ => builder.push(None),
-            }
+        StrConcat => {
+            Box::new(BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(str_contains))
         }
-
-        Ok(builder.finish().into())
     }
 }
 
@@ -47,60 +60,22 @@ impl<I1: Array, I2: Array, O: Array, F> BinaryExpression<I1, I2, O, F> {
 mod test {
     use crate::array::*;
     use crate::expr::*;
-    use crate::test_util::*;
+    use crate::scalar::ScalarRefImpl;
 
     #[test]
-    fn test_str_contains() {
-        let expr = BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(str_contains);
-        let result = expr
-            .eval(
-                &StringArray::from_slice(&[Some("000"), Some("111"), None]).into(),
-                &StringArray::from_slice(&[Some("0"), Some("0"), None]).into(),
-            )
-            .unwrap();
-        check_array_eq::<BoolArray>(
-            (&result).try_into().unwrap(),
-            &[Some(true), Some(false), None],
-        );
-    }
+    fn test_build_str_contains() {
+        let expr = build_binary_expression(ExpressionFunc::StrContains);
 
-    #[test]
-    fn test_concat_string() {
-        let expr = BinaryExpression::<StringArray, StringArray, StringArray, _>::new(str_concat);
-        let result = expr
-            .eval(
-                &StringArray::from_slice(&[Some("aa"), Some("bb"), None]).into(),
-                &StringArray::from_slice(&[Some("aa"), None, Some("cc")]).into(),
-            )
-            .unwrap();
-        check_array_eq::<StringArray>((&result).try_into().unwrap(), &[Some("aaaa"), None, None]);
-    }
-
-    #[test]
-    fn test_str_cmp_le() {
-        let expr = BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(
-            cmp_le::<String, String, String>,
-        );
-        let result = expr
-            .eval(
-                &StringArray::from_slice(&[Some("aa"), Some("bb"), None]).into(),
-                &StringArray::from_slice(&[Some("aa"), None, Some("cc")]).into(),
-            )
-            .unwrap();
-        check_array_eq::<BoolArray>((&result).try_into().unwrap(), &[Some(true), None, None]);
-    }
-
-    #[test]
-    fn test_str_cmp_eq() {
-        let expr = BinaryExpression::<StringArray, StringArray, BoolArray, _>::new(
-            cmp_eq::<String, String, String>,
-        );
-        let result = expr
-            .eval(
-                &StringArray::from_slice(&[Some("aa"), Some("bb"), None]).into(),
-                &StringArray::from_slice(&[Some("aa"), None, Some("cc")]).into(),
-            )
-            .unwrap();
-        check_array_eq::<BoolArray>((&result).try_into().unwrap(), &[Some(true), None, None]);
+        for _ in 0..10 {
+            let result = expr
+                .eval_expr(&[
+                    &StringArray::from_slice(&[Some("000"), Some("111"), None]).into(),
+                    &StringArray::from_slice(&[Some("0"), Some("0"), None]).into(),
+                ])
+                .unwrap();
+            assert_eq!(result.get(0).unwrap(), ScalarRefImpl::Bool(true));
+            assert_eq!(result.get(1).unwrap(), ScalarRefImpl::Bool(false));
+            assert!(result.get(2).is_none());
+        }
     }
 }

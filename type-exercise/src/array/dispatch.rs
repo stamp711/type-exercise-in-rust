@@ -1,6 +1,7 @@
 use crate::array::*;
 use crate::macros::for_all_types;
 use crate::scalar::*;
+use crate::TypeMismatch;
 
 macro_rules! array_dispatch {
     ($({ $Name:ident, $Variant:ident, $Array:ty, $ArrayBuilder:ty, $Owned:ty, $Ref:ty }),*) => {
@@ -70,21 +71,21 @@ macro_rules! array_dispatch {
         // Conversion between ArrayImpl and Array.
         $(
             impl std::convert::TryFrom<ArrayImpl> for $Array {
-                type Error = ();
+                type Error = TypeMismatch;
                 fn try_from(array: ArrayImpl) -> Result<Self, Self::Error> {
                     match array {
                         ArrayImpl::$Variant(this) => Ok(this),
-                        _ => Err(()),
+                        _ => Err(TypeMismatch),
                     }
                 }
             }
 
             impl<'a> std::convert::TryFrom<&'a ArrayImpl> for &'a $Array {
-                type Error = ();
+                type Error = TypeMismatch;
                 fn try_from(array: &'a ArrayImpl) -> Result<Self, Self::Error> {
                     match array {
                         ArrayImpl::$Variant(this) => Ok(this),
-                        _ => Err(()),
+                        _ => Err(TypeMismatch),
                     }
                 }
             }
@@ -99,11 +100,11 @@ macro_rules! array_dispatch {
         // Conversion between ArrayBuilderImpl and ArrayBuilder.
         $(
             impl std::convert::TryFrom<ArrayBuilderImpl> for $ArrayBuilder {
-                type Error = ();
+                type Error = TypeMismatch;
                 fn try_from(array: ArrayBuilderImpl) -> Result<Self, Self::Error> {
                     match array {
                         ArrayBuilderImpl::$Variant(this) => Ok(this),
-                        _ => Err(()),
+                        _ => Err(TypeMismatch),
                     }
                 }
             }
